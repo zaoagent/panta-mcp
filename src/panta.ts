@@ -59,8 +59,9 @@ export interface Position {
 /** Panta returns human-readable decimals; docs show strings ("0.520800")
  *  but be tolerant — normalize string|number to string so callers never
  *  crash on a type mismatch. */
-type Decimal = string | number;
-const dec = (v: Decimal): string => String(v);
+type Decimal = string | number | null | undefined;
+/** Normalize API decimals to string. Missing values become "" — never the literal "undefined". */
+const dec = (v: Decimal): string => (v == null ? "" : String(v));
 
 export interface PrimaryQuote {
   quoteId: string; marketId: string; side: "yes" | "no";
