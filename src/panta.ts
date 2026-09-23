@@ -56,6 +56,18 @@ export interface Position {
   outcome: "yes" | "no" | null;
 }
 
+/** Panta returns human-readable decimals; docs show strings ("0.520800")
+ *  but be tolerant — normalize string|number to string so callers never
+ *  crash on a type mismatch. */
+type Decimal = string | number;
+const dec = (v: Decimal): string => String(v);
+
+export interface PrimaryQuote {
+  quoteId: string; marketId: string; side: "yes" | "no";
+  amountUsdc: string; shares: string; avgPrice: string;
+  feeUsdc: string; expiresAt: string; blockhashExpiryHintSec?: number;
+}
+
 export const panta = {
   listMarkets: (p: { category?: string; status?: string; limit?: number; cursor?: string }) => {
     const q = new URLSearchParams();
@@ -72,10 +84,22 @@ export const panta = {
     get<{ wallet: string; positions: Position[] }>(
       `/positions/?wallet=${encodeURIComponent(wallet)}`),
 
-  quotePrimaryBuy: (p: { wallet: string; marketId: string; side: "yes" | "no"; amountUsdc: string }) =>
-    post<{ quoteId: string; shares: string; avgPrice: string; feeUsdc: string; expiresAt: string }>(
+  quotePrimaryBuy: async (p: { wallet: string; marketId: string; side: "yes" | "no"; amountUsdc: string }): Promise<PrimaryQuote> => {
+    const raw = await post<{
+      quoteId: string; marketId: string; side: "yes" | "no"; amountUsdc: Decimal;
+      shares: Decimal; avgPrice: Decimal; feeUsdc: Decimal;
+      expiresAt: string; blockhashExpiryHintSec?: number;
+    }>(
       `/primaryorderquote/`,
-      { wallet: p.wallet, marketId: p.marketId, side: p.side, amountUsdc: p.amountUsdc, ...(USER_ID ? { userId: USER_ID } : {}) }),
+      { wallet: p.wallet, marketId: p.marketId, side: p.side, amountUsdc: p.amountUsdc, ...(USER_ID ? { userId: USER_ID } : {}) });
+    return {
+      ...raw,
+      amountUsdc: dec(raw.amountUsdc),
+      shares: dec(raw.shares),
+      avgPrice: dec(raw.avgPrice),
+      feeUsdc: dec(raw.feeUsdc),
+    };
+  },
 
   buildPrimaryBuy: (p: { quoteId: string; wallet: string; maxSlippageBps?: number }) =>
     post(`/primaryorderbuild/`,

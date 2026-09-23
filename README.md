@@ -47,7 +47,7 @@ npm start
 | `search_markets` | Search the USDC market catalog (category/status filters + keyword) |
 | `get_market` | Market detail with live spot yes/no prices |
 | `get_positions` | Wallet holdings: shares, phase, claim eligibility, outcome |
-| `track_resolutions` | Recently resolved markets, or one market's resolution state |
+| `track_resolutions` | Recently resolved markets, or one market's resolution state (`phase` + `status` + `resolved` unified into `isResolved`) |
 | `build_trade_tx` | Quote a YES/NO primary buy → **unsigned** Solana tx |
 | `build_claim_tx` | **Unsigned** win-claim or creator-fee-claim instructions |
 
@@ -64,6 +64,21 @@ Typical agent flow:
 | `PANTA_API_KEY` | yes | — |
 | `PANTA_BASE_URL` | no | `https://live-api.panta.market/api/v1` |
 | `PANTA_USER_ID` | no | — (trade attribution) |
+
+## Testing
+
+```bash
+# protocol-level regression: all 6 tools over MCP/stdio (read-only;
+# build_* are expected to fail closed on markets with no quotable state)
+PANTA_API_KEY=pk_test_… node mcp-regress.mjs
+```
+
+Notes:
+
+- The Panta API signals resolution three ways (`phase`, `status`, `resolved`);
+  `track_resolutions` surfaces all three plus a unified `isResolved` boolean.
+- Quote decimals (`shares`, `avgPrice`, `feeUsdc`) are normalized to strings
+  even if the API ever returns numbers.
 
 ## License
 

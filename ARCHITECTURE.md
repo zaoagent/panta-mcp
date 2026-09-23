@@ -39,6 +39,16 @@ agent signs in its own wallet, broadcasts on its own RPC (out of scope here)
 | `build_trade_tx` | `POST /primaryorderquote/` → `POST /primaryorderbuild/` |
 | `build_claim_tx` | `POST /claim/build/` or `POST /claim/creator-fees/build/` |
 
+Resolution truth: the catalog exposes `phase`, `status`, and `resolved`
+independently (e.g. `phase: "primary"` with `status: "open"`). The
+`track_resolutions` tool returns all three plus a synthesized `isResolved`
+(`resolved === true || phase === "resolved" || status === "resolved"`) so
+agents never have to guess which field to trust.
+
+Quote decimals (`shares`, `avgPrice`, `feeUsdc`) are typed `string | number`
+at the boundary and normalized to strings — the docs show strings, but the
+client won't crash if a number ever arrives.
+
 Full endpoint reference: https://docs.panta.market/llms.txt
 
 ## Trust boundaries

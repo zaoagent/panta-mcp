@@ -13,6 +13,11 @@ import { panta } from "./panta.js";
 const server = new McpServer({ name: "panta-mcp", version: "0.1.0" });
 const text = (v: unknown) => ({ content: [{ type: "text" as const, text: JSON.stringify(v, null, 2) }] });
 
+/** Resolution is signaled three ways by the API — unify them so callers
+ *  don't have to guess which field to trust. */
+const isResolved = (m: { phase?: string; resolved?: boolean; status?: string }) =>
+  m.resolved === true || m.phase === "resolved" || m.status === "resolved";
+
 server.tool(
   "search_markets",
   "Search Panta's USDC prediction-market catalog. Filter by category/status; optional keyword matches title/description client-side.",
@@ -55,12 +60,22 @@ server.tool(
   async ({ marketId, limit }) => {
     if (marketId) {
       const m = await panta.getMarket(marketId);
-      return text({ marketId: m.marketId, title: m.title, phase: m.phase, resolved: m.resolved, resolutionTime: m.resolutionTime });
+      return text({
+        marketId: m.marketId, title: m.title,
+        phase: m.phase, status: m.status, resolved: m.resolved,
+        isResolved: isResolved(m),
+        resolutionTime: m.resolutionTime,
+      });
     }
     const r = await panta.listMarkets({ status: "resolved", limit });
     return text({
       count: r.items.length,
-      items: r.items.map(m => ({ marketId: m.marketId, title: m.title, phase: m.phase, resolutionTime: m.resolutionTime, volumeUsdc: m.volumeUsdc })),
+      items: r.items.map(m => ({
+        marketId: m.marketId, title: m.title,
+        phase: m.phase, status: m.status, resolved: m.resolved,
+        isResolved: isResolved(m),
+        resolutionTime: m.resolutionTime, volumeUsdc: m.volumeUsdc,
+      })),
       nextCursor: r.nextCursor,
     });
   }
